@@ -11,6 +11,7 @@
 #include <limits>
 #include <iomanip>
 #include <type_traits>
+#include <cstdio>
 
 #ifdef FMM_USE_FAST_FLOAT
 #include <fast_float/fast_float.h>
@@ -599,31 +600,35 @@ namespace fast_matrix_market {
      */
     template <typename T, typename std::enable_if<std::is_floating_point_v<T> && !std::is_same_v<T, long double>, int>::type = 0>
     std::string value_to_string(const T& value, int precision) {
-#ifdef FMM_USE_DRAGONBOX
-        if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-            if (precision < 0) {
-                // Shortest representation. Dragonbox is fastest.
-                return value_to_string_dragonbox(value);
-            }
-        }
-#endif
+        char valuestr[100];
+        std::sprintf(valuestr, "%10.5f", value);
+        return std::string(valuestr);
+        
+// #ifdef FMM_USE_DRAGONBOX
+//         if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+//             if (precision < 0) {
+//                 // Shortest representation. Dragonbox is fastest.
+//                 return value_to_string_dragonbox(value);
+//             }
+//         }
+// #endif
 
-#ifdef FMM_TO_CHARS_DOUBLE_SUPPORTED
-        return value_to_string_to_chars(value, precision);
-#else
-        constexpr bool have_ryu =
-#ifdef FMM_USE_RYU
-            true;
-#else
-            false;
-#endif
+// #ifdef FMM_TO_CHARS_DOUBLE_SUPPORTED
+//         return value_to_string_to_chars(value, precision);
+// #else
+//         constexpr bool have_ryu =
+// #ifdef FMM_USE_RYU
+//             true;
+// #else
+//             false;
+// #endif
 
-        if constexpr (have_ryu && (std::is_same_v<T, float> || std::is_same_v<T, double>)) {
-            return value_to_string_ryu(value, precision);
-        } else {
-            return value_to_string_fallback(value, precision);
-        }
-#endif
+//         if constexpr (have_ryu && (std::is_same_v<T, float> || std::is_same_v<T, double>)) {
+//             return value_to_string_ryu(value, precision);
+//         } else {
+//             return value_to_string_fallback(value, precision);
+//         }
+// #endif
     }
 
     template <typename COMPLEX, typename std::enable_if<is_complex<COMPLEX>::value, int>::type = 0>
