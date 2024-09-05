@@ -27,10 +27,11 @@ target_compile_features(fast_matrix_market INTERFACE cxx_std_17)
 find_package(Threads)
 target_link_libraries(fast_matrix_market INTERFACE Threads::Threads)
 
+# temporarly disable portability reasons
 # CMake options to enable/disable dependencies
-option(FMM_USE_FAST_FLOAT "Enable fast_float float/double parser" ON)
-option(FMM_USE_DRAGONBOX "Enable dragonbox float/double formatter for shortest representation" ON)
-option(FMM_USE_RYU "Enable Ryu float/double formatter with precision support" ON)
+option(FMM_USE_FAST_FLOAT "Enable fast_float float/double parser" OFF)
+option(FMM_USE_DRAGONBOX "Enable dragonbox float/double formatter for shortest representation" OFF)
+option(FMM_USE_RYU "Enable Ryu float/double formatter with precision support" OFF)
 
 ############################################
 # Test for available versions of std::from_chars.
@@ -128,3 +129,49 @@ option(FAST_MATRIX_MARKET_BENCH "Enable benchmarks" OFF)
 if(FAST_MATRIX_MARKET_BENCH)
     add_subdirectory(benchmark)
 endif(FAST_MATRIX_MARKET_BENCH)
+
+
+# load cmake modules
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+# wrap function to install package, don't change it starting from here. 
+function(configure_and_install_package PACKAGE_NAME VERSION)
+    set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+    set(LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR})
+
+    install(TARGETS ${PACKAGE_NAME}
+            EXPORT ${PACKAGE_NAME}Targets
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+    install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+    install(EXPORT ${PACKAGE_NAME}Targets
+            FILE ${PACKAGE_NAME}Targets.cmake
+            NAMESPACE ${PACKAGE_NAME}::
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PACKAGE_NAME})
+
+    configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/TemplateConfig.cmake.in
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+        PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR
+    )
+
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_NAME}ConfigVersion.cmake"
+        VERSION ${VERSION}
+        COMPATIBILITY AnyNewerVersion)
+
+    install(FILES
+            "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_NAME}Config.cmake"
+            "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_NAME}ConfigVersion.cmake"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PACKAGE_NAME})
+endfunction()
+option(INSTALLPROJECT "Install the project" OFF)
+if(INSTALLPROJECT)
+    configure_and_install_package(${PROJECT_NAME} ${PROJECT_VERSION})
+endif()
